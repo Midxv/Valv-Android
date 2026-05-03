@@ -144,7 +144,8 @@ public class GalleryGridAdapter extends RecyclerView.Adapter<GalleryGridViewHold
         GalleryFile galleryFile = galleryFiles.get(position);
 
         updateSelectedView(holder, galleryFile);
-        holder.binding.txtName.setVisibility(showFileNames || galleryFile.isDirectory() ? View.VISIBLE : View.GONE);
+        // FORCE hide names for photos/videos to keep the compact grid, but keep them for Albums
+        holder.binding.txtName.setVisibility(galleryFile.isDirectory() ? View.VISIBLE : View.GONE);
         holder.binding.imageView.setImageDrawable(null);
         if (!isRootDir && (galleryFile.isGif() || galleryFile.isVideo() || galleryFile.isDirectory())) {
             holder.binding.imgType.setVisibility(View.VISIBLE);
@@ -259,7 +260,7 @@ public class GalleryGridAdapter extends RecyclerView.Adapter<GalleryGridViewHold
             final int pos = holder.getBindingAdapterPosition();
             if (galleryFile.isAllFolder()) {
                 if (!selectMode) {
-                    Navigation.findNavController(holder.binding.layout).navigate(R.id.action_directory_to_directory_all);
+                    Navigation.findNavController(holder.binding.layout).navigate(R.id.action_directory_to_directoryAll);
                 }
             } else if (selectMode) {
                 if (isRootDir || !galleryFile.isDirectory()) {

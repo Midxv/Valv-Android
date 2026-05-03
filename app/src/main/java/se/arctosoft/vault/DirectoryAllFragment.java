@@ -26,6 +26,8 @@ public class DirectoryAllFragment extends DirectoryBaseFragment {
     private static final String TAG = "DirectoryAllFragment";
 
     private int foundFiles = 0, foundFolders = 0;
+    private com.google.android.material.bottomnavigation.BottomNavigationView bottomNav;
+    private boolean isNavPillHidden = false; // The lock that prevents scroll lag!
 
     @Override
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
@@ -75,6 +77,45 @@ public class DirectoryAllFragment extends DirectoryBaseFragment {
         if (!galleryViewModel.isInitialised()) {
             findAllFiles();
         }
+
+        // --- RESPONSIVE BOTTOM NAV LOGIC ---
+        bottomNav = binding.getRoot().findViewById(R.id.bottom_navigation);
+        if (bottomNav != null) {
+            bottomNav.setVisibility(View.VISIBLE);
+            bottomNav.setSelectedItemId(R.id.nav_all_files);
+
+            bottomNav.setOnItemSelectedListener(item -> {
+                int id = item.getItemId();
+                if (id == R.id.nav_albums) {
+                    navController.popBackStack();
+                    return true;
+                } else if (id == R.id.nav_all_files) {
+                    return true;
+                }
+                return false;
+            });
+
+            // Smooth, Optimized Hide-on-Scroll Animation
+            binding.recyclerView.addOnScrollListener(new androidx.recyclerview.widget.RecyclerView.OnScrollListener() {
+                @Override
+                public void onScrolled(@NonNull androidx.recyclerview.widget.RecyclerView recyclerView, int dx, int dy) {
+                    super.onScrolled(recyclerView, dx, dy);
+
+                    // Don't animate if fullscreen media is open
+                    if (galleryViewModel.isViewpagerVisible()) return;
+
+                    // Ensure we only trigger the animation ONCE per state change to prevent lag
+                    if (dy > 15 && !isNavPillHidden) {
+                        isNavPillHidden = true; // Lock it
+                        bottomNav.animate().translationY(bottomNav.getHeight() + 150).setDuration(200).start();
+                    } else if (dy < -15 && isNavPillHidden) {
+                        isNavPillHidden = false; // Unlock it
+                        bottomNav.animate().translationY(0).setDuration(200).start();
+                    }
+                }
+            });
+        }
+        // -----------------------------
 
         initViewModels();
     }
@@ -253,4 +294,24 @@ public class DirectoryAllFragment extends DirectoryBaseFragment {
         return files;
     }
 
+    @Override
+    void showViewpager(boolean show, int pos, boolean animate) {
+        if (bottomNav != null) {
+            bottomNav.setVisibility(show ? View.GONE : View.VISIBLE);
+        }
+
+        // 1. Setup a buttery smooth, modern Fade transition
+        android.transition.Transition transition = new android.transition.Fade();
+        transition.setDuration(250); // Snappy speed
+        transition.setInterpolator(new androidx.interpolator.view.animation.FastOutSlowInInterpolator());
+
+        // 2. Apply it to the root view BEFORE changing visibility
+        android.transition.TransitionManager.beginDelayedTransition(binding.getRoot(), transition);
+
+        // 3. Force the ViewPager visibility here to trigger our modern fade
+        binding.viewPager.setVisibility(show ? View.VISIBLE : View.GONE);
+
+        // 4. Pass 'false' to super so it completely ignores the old, clunky slide animation
+        super.showViewpager(show, pos, false);
+    }
 }

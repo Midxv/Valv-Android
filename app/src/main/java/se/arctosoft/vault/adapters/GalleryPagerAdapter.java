@@ -19,6 +19,7 @@
 package se.arctosoft.vault.adapters;
 
 import android.content.ContentResolver;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.PointF;
@@ -256,7 +257,13 @@ public class GalleryPagerAdapter extends RecyclerView.Adapter<GalleryPagerViewHo
     }
 
     private void setName(@NonNull GalleryPagerViewHolder holder, GalleryFile galleryFile) {
-        holder.parentBinding.txtName.setText(weakReference.get().getString(R.string.gallery_adapter_file_name, galleryFile.getName(), StringStuff.bytesToReadableString(galleryFile.getSize())));
+        // Use the decrypted original name if it's available
+        String displayName = galleryFile.getOriginalName() != null ? galleryFile.getOriginalName() : galleryFile.getName();
+
+        // Set the standard top-left text name
+        holder.parentBinding.txtName.setText(weakReference.get().getString(R.string.gallery_adapter_file_name, displayName, StringStuff.bytesToReadableString(galleryFile.getSize())));
+
+        // (We completely deleted the code here that was trying to find R.id.tv_video_title)
     }
 
     @Override
@@ -316,51 +323,152 @@ public class GalleryPagerAdapter extends RecyclerView.Adapter<GalleryPagerViewHo
         holder.binding.text.setTextIsSelectable(true);
     }
 
+    @OptIn(markerClass = UnstableApi.class)
     private void setupVideoView(GalleryPagerViewHolder.GalleryPagerVideoViewHolder holder, FragmentActivity context, GalleryFile galleryFile) {
         holder.binding.rLPlay.setVisibility(View.VISIBLE);
         holder.binding.playerView.setVisibility(View.INVISIBLE);
+
+        // Hide the outer title so we don't have two titles competing on screen
+        holder.parentBinding.txtName.setVisibility(View.GONE);
 
         Glide.with(context)
                 .load(galleryFile.getThumbUri())
                 .apply(GlideStuff.getRequestOptions(useDiskCache))
                 .into(holder.binding.imgThumb);
 
-        holder.parentBinding.imgFullscreen.setVisibility(isFullscreen ? View.GONE : View.VISIBLE);
+        // --- NEW: Sync outer buttons with the video controls so they don't flash! ---
+        holder.binding.playerView.setControllerVisibilityListener((androidx.media3.ui.PlayerView.ControllerVisibilityListener) visibility -> {
+            holder.parentBinding.lLButtons.setVisibility(visibility);
+            holder.parentBinding.imgFullscreen.setVisibility(isFullscreen ? View.GONE : visibility);
+        });
 
-        // --- NEW: Hook up your custom controller UI elements ---
+        // --- MAP UI ELEMENTS ---
         View controllerView = holder.binding.playerView;
 
-        TextView tvTitle = controllerView.findViewById(R.id.tv_video_title);
-        if (tvTitle != null) {
-            tvTitle.setText(galleryFile.getName()); // Set the actual file name
-        }
 
-        ImageButton btnBack = controllerView.findViewById(R.id.btn_back);
-        if (btnBack != null) {
-            btnBack.setOnClickListener(v -> {
-                // Exit fullscreen or navigate back
-                if (isFullscreen) {
-                    setFullscreen(context, false);
-                } else {
-                    context.onBackPressed();
+        View gestureOverlay = controllerView.findViewById(R.id.gesture_overlay);
+        TextView tvGestureText = controllerView.findViewById(R.id.tv_gesture_text);
+
+        Runnable hideOverlay = () -> {
+            if (gestureOverlay != null) {
+                gestureOverlay.animate().alpha(0f).setDuration(250).withEndAction(() -> gestureOverlay.setVisibility(View.GONE));
+            }
+        };
+
+        // --- MANUAL PLAY/PAUSE CONTROL ---
+        ImageButton btnPlayPause = controllerView.findViewById(R.id.custom_play_pause);
+        if (btnPlayPause != null) {
+            btnPlayPause.setOnClickListener(v -> {
+                int pos = holder.getBindingAdapterPosition();
+                if (pos >= 0) {
+                    ExoPlayer player = players.get(pos);
+                    if (player != null) {
+                        if (player.isPlaying()) player.pause();
+                        else player.play();
+                        btnPlayPause.setImageResource(player.isPlaying() ? R.drawable.ic_baseline_pause_24 : R.drawable.ic_baseline_play_arrow_24);
+                    }
                 }
             });
         }
 
-        ImageButton btnAspectRatio = controllerView.findViewById(R.id.btn_aspect_ratio);
-        if (btnAspectRatio != null) {
-            btnAspectRatio.setOnClickListener(v -> {
-                // Toggle Fullscreen using your existing method
-                toggleFullscreen(context);
+        // --- GESTURE CONTROLS ---
+        final android.media.AudioManager audioManager = (android.media.AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+
+        holder.binding.playerView.setOnTouchListener(new View.OnTouchListener() {
+            private float startY = 0f;
+            private int startVolume = 0;
+            private float startBrightness = 0f;
+            private boolean isRightSide = false;
+
+            private final android.view.GestureDetector gestureDetector = new android.view.GestureDetector(context, new android.view.GestureDetector.SimpleOnGestureListener() {
+
+                @Override
+                public boolean onDown(android.view.MotionEvent e) {
+                    startY = e.getY();
+                    isRightSide = e.getX() > (holder.binding.playerView.getWidth() / 2f);
+                    startVolume = audioManager.getStreamVolume(android.media.AudioManager.STREAM_MUSIC);
+                    android.view.Window window = context.getWindow();
+                    startBrightness = window.getAttributes().screenBrightness;
+                    if (startBrightness < 0) startBrightness = 0.5f;
+                    return true;
+                }
+
+                @Override
+                public boolean onSingleTapConfirmed(android.view.MotionEvent e) {
+                    // FIXED: Properly show/hide the timeline controls!
+                    if (holder.binding.playerView.isControllerFullyVisible()) {
+                        holder.binding.playerView.hideController();
+                    } else {
+                        holder.binding.playerView.showController();
+                    }
+                    return true;
+                }
+
+                @Override
+                public boolean onDoubleTap(android.view.MotionEvent e) {
+                    // Double Tap: Seek Forward/Rewind 10s
+                    int pos = holder.getBindingAdapterPosition();
+                    if (pos >= 0) {
+                        ExoPlayer player = players.get(pos);
+                        if (player != null) {
+                            long currentPos = player.getCurrentPosition();
+                            if (e.getX() > (holder.binding.playerView.getWidth() / 2f)) {
+                                // Right Side = Fast Forward 10s
+                                player.seekTo(Math.min(player.getDuration(), currentPos + 10000));
+                            } else {
+                                // Left Side = Rewind 10s
+                                player.seekTo(Math.max(0, currentPos - 10000));
+                            }
+                        }
+                    }
+                    return true;
+                }
+
+                @Override
+                public boolean onScroll(android.view.MotionEvent e1, android.view.MotionEvent e2, float distanceX, float distanceY) {
+                    // Ignore horizontal swipes
+                    if (Math.abs(distanceX) > Math.abs(distanceY)) return false;
+
+                    float deltaY = startY - e2.getY(); // Positive if swiping up
+                    float swipePercentage = deltaY / holder.binding.playerView.getHeight();
+
+                    if (isRightSide) {
+                        // --- SWIPE RIGHT SIDE: VOLUME ---
+                        int maxVolume = audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC);
+                        int volumeChange = (int) (maxVolume * swipePercentage);
+                        int newVolume = Math.max(0, Math.min(maxVolume, startVolume + volumeChange));
+                        audioManager.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, newVolume, android.media.AudioManager.FLAG_SHOW_UI);
+                    } else {
+                        // --- SWIPE LEFT SIDE: BRIGHTNESS ---
+                        android.view.Window window = context.getWindow();
+                        android.view.WindowManager.LayoutParams lp = window.getAttributes();
+                        float newBrightness = Math.max(0.01f, Math.min(1.0f, startBrightness + swipePercentage));
+                        lp.screenBrightness = newBrightness;
+                        window.setAttributes(lp);
+                    }
+                    return true;
+                }
             });
-        }
 
-        // You can add listeners for btn_speed, btn_pip, btn_lock here as you build out those features
-        // --------------------------------------------------------
+            @Override
+            public boolean onTouch(View v, android.view.MotionEvent event) {
+                // THE FIX: If the user touches the bottom 25% of the screen, ignore gestures!
+                // This allows the ExoPlayer timeline to be perfectly scrubbable.
+                if (event.getY() > (holder.binding.playerView.getHeight() * 0.75f)) {
+                    return false;
+                }
 
+                // Otherwise, pass the touch to our gesture engine
+                gestureDetector.onTouchEvent(event);
+                return true;
+            }
+        });
+
+        // 4. Start Video on Click
         holder.binding.rLPlay.setOnClickListener(v -> {
             holder.binding.rLPlay.setVisibility(View.GONE);
             holder.binding.playerView.setVisibility(View.VISIBLE);
+            // This triggers your ExoPlayer initialization logic
             playVideo(context, galleryFile.getUri(), holder, galleryFile.getVersion(), galleryViewModel.getVideoPosition(galleryFile.getUri()));
         });
     }
@@ -399,7 +507,12 @@ public class GalleryPagerAdapter extends RecyclerView.Adapter<GalleryPagerViewHo
             @Override
             public void onIsPlayingChanged(boolean isPlaying) {
                 Player.Listener.super.onIsPlayingChanged(isPlaying);
-                holder.parentBinding.lLButtons.setVisibility(isPlaying ? View.INVISIBLE : View.VISIBLE);
+
+                // (The buggy holder.parentBinding.lLButtons.setVisibility line has been deleted from here!)
+
+                ImageButton playBtn = holder.binding.playerView.findViewById(R.id.custom_play_pause);
+                if (playBtn != null) playBtn.setImageResource(isPlaying ? R.drawable.ic_baseline_pause_24 : R.drawable.ic_baseline_play_arrow_24);
+
                 if (!isPlaying) {
                     galleryViewModel.setVideoPosition(finalPlayer.getCurrentPosition(), fileUri);
                 }
@@ -795,6 +908,8 @@ public class GalleryPagerAdapter extends RecyclerView.Adapter<GalleryPagerViewHo
     private void releaseVideo(GalleryPagerViewHolder.GalleryPagerVideoViewHolder holder) {
         final int pos = holder.getBindingAdapterPosition();
         holder.binding.playerView.setPlayer(null);
+
+
         if (pos >= 0) {
             ExoPlayer player = players.remove(pos);
             if (player != null) {

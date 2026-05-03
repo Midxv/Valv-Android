@@ -14,7 +14,7 @@ configure<ApplicationExtension> {
         minSdk = 28
         targetSdk = 36
         versionCode = 41
-        versionName = "2.4.1"
+        versionName = "2.4.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

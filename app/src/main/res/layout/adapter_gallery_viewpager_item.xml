@@ -1,35 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:animateLayoutChanges="true">
+    android:layout_height="match_parent">
 
+    <!-- 1. The Media Content -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/content"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+    <!-- 2. Top Bar: File Name -->
     <TextView
         android:id="@+id/txtName"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="4dp"
-        android:layout_marginEnd="4dp"
-        android:textSize="12sp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginTop="16dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:shadowColor="#80000000"
+        android:shadowDx="1"
+        android:shadowDy="1"
+        android:shadowRadius="3"
+        android:textColor="@android:color/white"
+        android:textSize="14sp"
+        android:textStyle="bold"
         app:layout_constraintEnd_toStartOf="@id/imgFullscreen"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <!-- 3. Top Bar: Fullscreen Toggle -->
     <se.arctosoft.vault.views.PressableImageView
         android:id="@+id/imgFullscreen"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:padding="8dp"
         android:src="@drawable/ic_round_fullscreen_24"
-        android:visibility="visible"
+        app:tint="@android:color/white"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <!-- 4. Note/Description Layout (Modernized with slight elevation/margins) -->
     <se.arctosoft.vault.views.PressableConstraintLayout
         android:id="@+id/note_layout"
         android:layout_width="match_parent"
@@ -51,16 +67,17 @@
                 android:id="@+id/note"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="8dp"
-                android:textColor="?android:attr/textColorPrimary" />
+                android:padding="16dp"
+                android:textColor="?android:attr/textColorPrimary"
+                android:textSize="14sp" />
 
         </ScrollView>
 
         <se.arctosoft.vault.views.PressableImageView
             android:id="@+id/note_action"
-            android:layout_width="wrap_content"
+            android:layout_width="48dp"
             android:layout_height="0dp"
-            android:paddingHorizontal="5dp"
+            android:padding="12dp"
             android:src="@drawable/round_expand_less_24"
             app:layout_constraintBottom_toBottomOf="@id/note_scroll"
             app:layout_constraintEnd_toEndOf="parent"
@@ -68,6 +85,7 @@
 
     </se.arctosoft.vault.views.PressableConstraintLayout>
 
+    <!-- 5. Bottom Action Bar (Cleaned up, removed redundant wrappers) -->
     <LinearLayout
         android:id="@+id/lLButtons"
         android:layout_width="match_parent"
@@ -75,81 +93,53 @@
         android:background="?attr/gallery_viewpager_buttons_background"
         android:baselineAligned="false"
         android:orientation="horizontal"
+        android:paddingVertical="8dp"
         android:weightSum="3"
         app:layout_constraintBottom_toBottomOf="parent">
 
-        <LinearLayout
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnDelete"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:orientation="vertical">
+            android:text="@string/delete"
+            android:textColor="?attr/gallery_viewpager_buttons"
+            app:icon="@drawable/ic_outline_delete_forever_24"
+            app:iconGravity="top"
+            app:iconTint="?attr/gallery_viewpager_buttons" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnDelete"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="?attr/selectableItemBackground"
-                android:backgroundTint="@color/color_invisible"
-                android:padding="@dimen/fullscreen_buttons_padding"
-                android:src="@drawable/ic_outline_delete_forever_24"
-                android:text="@string/delete"
-                android:textColor="?attr/gallery_viewpager_buttons"
-                app:icon="@drawable/ic_outline_delete_forever_24"
-                app:iconGravity="top"
-                app:iconPadding="0dp"
-                app:iconSize="@dimen/fullscreen_icon_size"
-                app:iconTint="?attr/gallery_viewpager_buttons" />
-
-        </LinearLayout>
-
-        <LinearLayout
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnExport"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:orientation="vertical">
+            android:text="@string/export"
+            android:textColor="?attr/gallery_viewpager_buttons"
+            app:icon="@drawable/ic_outline_file_download_24"
+            app:iconGravity="top"
+            app:iconTint="?attr/gallery_viewpager_buttons" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnExport"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="?attr/selectableItemBackground"
-                android:backgroundTint="@color/color_invisible"
-                android:padding="@dimen/fullscreen_buttons_padding"
-                android:src="@drawable/ic_outline_file_download_24"
-                android:text="@string/export"
-                android:textColor="?attr/gallery_viewpager_buttons"
-                app:icon="@drawable/ic_outline_file_download_24"
-                app:iconGravity="top"
-                app:iconPadding="0dp"
-                app:iconSize="@dimen/fullscreen_icon_size"
-                app:iconTint="?attr/gallery_viewpager_buttons" />
-
-        </LinearLayout>
-
-        <LinearLayout
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnMenu"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:orientation="vertical">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnMenu"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="?attr/selectableItemBackground"
-                android:backgroundTint="@color/color_invisible"
-                android:padding="@dimen/fullscreen_buttons_padding"
-                android:src="@drawable/round_more_vert_24"
-                android:text="@string/more"
-                android:textColor="?attr/gallery_viewpager_buttons"
-                app:icon="@drawable/round_more_vert_24"
-                app:iconGravity="top"
-                app:iconPadding="0dp"
-                app:iconSize="@dimen/fullscreen_icon_size"
-                app:iconTint="?attr/gallery_viewpager_buttons" />
-
-        </LinearLayout>
+            android:text="@string/more"
+            android:textColor="?attr/gallery_viewpager_buttons"
+            app:icon="@drawable/round_more_vert_24"
+            app:iconGravity="top"
+            app:iconTint="?attr/gallery_viewpager_buttons" />
 
     </LinearLayout>
+
+    <!-- 6. UI Element Grouping (This handles the "Hide for Video" logic!) -->
+    <androidx.constraintlayout.widget.Group
+        android:id="@+id/uiOverlayGroup"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:constraint_referenced_ids="txtName,imgFullscreen,note_layout,lLButtons" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -5,198 +5,99 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#40000000"> <!-- Dark overlay -->
+    android:background="#26000000">
 
-    <!-- ================= TOP BAR ================= -->
-    <LinearLayout
-        android:id="@+id/top_bar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="16dp"
-        android:gravity="center_vertical"
-        app:layout_constraintTop_toTopOf="parent">
-
-        <ImageButton
-            android:id="@+id/btn_back"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="?selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_baseline_arrow_back_24"
-            app:tint="#FFFFFF" />
-
-        <TextView
-            android:id="@+id/tv_video_title"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="16dp"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp"
-            tools:text="VID-20260503..." />
-
-        <TextView
-            android:id="@+id/tv_decoder"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="16dp"
-            android:text="HW+"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp"
-            android:textStyle="bold" />
-
-        <ImageButton
-            android:id="@+id/btn_subtitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="16dp"
-            android:background="?selectableItemBackgroundBorderless"
-            android:src="@drawable/outline_subtitles_24"
-            app:tint="#FFFFFF" />
-
-        <ImageButton
-            android:id="@+id/btn_audio_track"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="16dp"
-            android:background="?selectableItemBackgroundBorderless"
-            android:src="@drawable/outline_music_note_24"
-            app:tint="#FFFFFF" />
-
-        <ImageButton
-            android:id="@+id/btn_more"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="?selectableItemBackgroundBorderless"
-            android:src="@drawable/round_more_vert_24"
-            app:tint="#FFFFFF" />
-    </LinearLayout>
-
-    <!-- ================= CENTER CONTROLS ================= -->
-    <!-- ExoPlayer will automatically toggle between exo_play and exo_pause -->
-    <FrameLayout
+    <!-- ================= GESTURE OVERLAY ================= -->
+    <!-- This pill pops up when you swipe or double tap! -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/gesture_overlay"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:cardBackgroundColor="#99000000"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="0dp"
+        app:strokeWidth="0dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
+        <TextView
+            android:id="@+id/tv_gesture_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="24dp"
+            android:paddingVertical="12dp"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            tools:text="Volume 85%" />
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- ================= BOTTOM TIMELINE ================= -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="8dp"
+        android:layout_marginBottom="120dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="12dp"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <!-- FIXED PLAY/PAUSE -->
         <ImageButton
-            android:id="@id/exo_play"
-            android:layout_width="80dp"
-            android:layout_height="80dp"
+            android:id="@+id/custom_play_pause"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_marginEnd="8dp"
             android:background="?selectableItemBackgroundBorderless"
+            android:scaleType="fitCenter"
             android:src="@drawable/ic_baseline_play_arrow_24"
             app:tint="#FFFFFF" />
 
-        <ImageButton
-            android:id="@id/exo_pause"
-            android:layout_width="80dp"
-            android:layout_height="80dp"
-            android:background="?selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_baseline_pause_24"
-            app:tint="#FFFFFF" />
-    </FrameLayout>
-
-    <!-- ================= BOTTOM CONTROLS ================= -->
-    <LinearLayout
-        android:id="@+id/bottom_controls_row"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:paddingHorizontal="16dp"
-        android:paddingTop="8dp"
-        android:gravity="center_vertical"
-        app:layout_constraintBottom_toTopOf="@id/scrubber_row">
-
-        <ImageButton
-            android:id="@+id/btn_lock"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="?selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_outline_lock_24"
-            app:tint="#FFFFFF" />
-
-        <ImageButton
-            android:id="@+id/btn_rotate"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="24dp"
-            android:background="?selectableItemBackgroundBorderless"
-            android:src="@drawable/outline_screen_rotation_24"
-            app:tint="#FFFFFF" />
-
-        <TextView
-            android:id="@+id/tv_speed"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="24dp"
-            android:text="1.00x"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp"
-            android:textStyle="bold" />
-
-        <Space
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1" />
-
-        <ImageButton
-            android:id="@+id/btn_pip"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="24dp"
-            android:background="?selectableItemBackgroundBorderless"
-            android:src="@drawable/outline_picture_in_picture_alt_24"
-            app:tint="#FFFFFF" />
-
-        <ImageButton
-            android:id="@+id/btn_aspect_ratio"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="?selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_round_fullscreen_24"
-            app:tint="#FFFFFF" />
-    </LinearLayout>
-
-    <!-- ================= SCRUBBER ROW ================= -->
-    <LinearLayout
-        android:id="@+id/scrubber_row"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="16dp"
-        android:gravity="center_vertical"
-        app:layout_constraintBottom_toBottomOf="parent">
-
-        <!-- exo_position automatically updates the current time -->
         <TextView
             android:id="@id/exo_position"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:shadowColor="#B3000000"
+            android:shadowDx="1"
+            android:shadowDy="1"
+            android:shadowRadius="4"
             android:textColor="#FFFFFF"
             android:textSize="14sp" />
 
-        <!-- exo_progress automatically acts as the scrubber -->
         <androidx.media3.ui.DefaultTimeBar
             android:id="@id/exo_progress"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginHorizontal="12dp"
             android:layout_weight="1"
-            android:layout_marginHorizontal="8dp"
-            app:played_color="#64B5F6"
-            app:scrubber_color="#64B5F6" />
+            app:bar_height="8dp"
+            app:buffered_color="#66FFFFFF"
+            app:played_color="?attr/colorPrimary"
+            app:scrubber_color="?attr/colorPrimary"
+            app:scrubber_dragged_size="32dp"
+            app:scrubber_enabled_size="24dp"
+            app:unplayed_color="#4DFFFFFF" />
 
-        <!-- exo_duration automatically fetches the total video time -->
         <TextView
             android:id="@id/exo_duration"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:shadowColor="#B3000000"
+            android:shadowDx="1"
+            android:shadowDy="1"
+            android:shadowRadius="4"
             android:textColor="#FFFFFF"
             android:textSize="14sp" />
+
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
