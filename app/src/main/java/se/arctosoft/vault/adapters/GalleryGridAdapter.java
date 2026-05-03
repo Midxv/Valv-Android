@@ -80,6 +80,9 @@ public class GalleryGridAdapter extends RecyclerView.Adapter<GalleryGridViewHold
     private int lastSelectedPos;
     private String nestedPath;
 
+    // --- NEW: Lightweight thread pool for background decryption ---
+    private final java.util.concurrent.ExecutorService nameDecryptionExecutor = java.util.concurrent.Executors.newFixedThreadPool(4);
+
     private final WeakReference<FragmentActivity> weakReference;
     private final List<GalleryFile> galleryFiles;
     private final UniqueLinkedList<GalleryFile> selectedFiles;
@@ -144,8 +147,10 @@ public class GalleryGridAdapter extends RecyclerView.Adapter<GalleryGridViewHold
         GalleryFile galleryFile = galleryFiles.get(position);
 
         updateSelectedView(holder, galleryFile);
-        // FORCE hide names for photos/videos to keep the compact grid, but keep them for Albums
-        holder.binding.txtName.setVisibility(galleryFile.isDirectory() ? View.VISIBLE : View.GONE);
+
+        // --- NEW: Always respect user toggle for names (or force show for folders) ---
+        holder.binding.txtName.setVisibility(showFileNames || galleryFile.isDirectory() ? View.VISIBLE : View.GONE);
+
         holder.binding.imageView.setImageDrawable(null);
         if (!isRootDir && (galleryFile.isGif() || galleryFile.isVideo() || galleryFile.isDirectory())) {
             holder.binding.imgType.setVisibility(View.VISIBLE);
@@ -188,8 +193,6 @@ public class GalleryGridAdapter extends RecyclerView.Adapter<GalleryGridViewHold
                         .into(holder.binding.imageView);
             }
 
-            // --- CLEAN ALBUM NAMES ---
-            // Strip the long relative path down to just the target folder name
             String cleanFolderName = new java.io.File(galleryFile.getNameWithPath()).getName();
             holder.binding.txtName.setText(context.getString(R.string.gallery_adapter_folder_name, cleanFolderName, galleryFile.getFileCount()));
 
@@ -251,11 +254,47 @@ public class GalleryGridAdapter extends RecyclerView.Adapter<GalleryGridViewHold
         }).start();
     }
 
+    // --- NEW: Asynchronous Decryption Engine & Cute Formatting ---
     private void setItemFilename(@NonNull GalleryGridViewHolder holder, Context context, @NonNull GalleryFile galleryFile) {
-        if (galleryFile.getSize() > 0) {
-            holder.binding.txtName.setText(context.getString(R.string.gallery_adapter_file_name, galleryFile.getName(), StringStuff.bytesToReadableString(galleryFile.getSize())));
+        if (galleryFile.isDirectory()) {
+            String cleanFolderName = new java.io.File(galleryFile.getNameWithPath()).getName();
+            holder.binding.txtName.setText(context.getString(R.string.gallery_adapter_folder_name, cleanFolderName, galleryFile.getFileCount()));
+            return;
+        }
+
+        if (galleryFile.getOriginalName() != null) {
+            displayCuteName(holder, galleryFile.getOriginalName(), galleryFile.getSize());
         } else {
-            holder.binding.txtName.setText(galleryFile.getName());
+            // Show encrypted name immediately to avoid empty space
+            displayCuteName(holder, galleryFile.getName(), galleryFile.getSize());
+
+            // Decrypt quietly in the background
+            nameDecryptionExecutor.execute(() -> {
+                try {
+                    String realName = Encryption.getOriginalFilename(context.getContentResolver().openInputStream(galleryFile.getUri()), password.getPassword(), false, galleryFile.getVersion());
+                    galleryFile.setOriginalName(realName);
+
+                    if (context instanceof FragmentActivity) {
+                        ((FragmentActivity) context).runOnUiThread(() -> {
+                            // Ensure the holder hasn't been recycled for a different file while scrolling
+                            if (holder.getBindingAdapterPosition() != RecyclerView.NO_POSITION &&
+                                    galleryFiles.get(holder.getBindingAdapterPosition()) == galleryFile) {
+                                displayCuteName(holder, realName, galleryFile.getSize());
+                            }
+                        });
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+        }
+    }
+
+    private void displayCuteName(GalleryGridViewHolder holder, String name, long size) {
+        if (size > 0) {
+            holder.binding.txtName.setText(name + " • " + StringStuff.bytesToReadableString(size));
+        } else {
+            holder.binding.txtName.setText(name);
         }
     }
 

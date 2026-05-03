@@ -6,7 +6,7 @@
     android:layout_height="wrap_content"
     android:layout_margin="1dp">
 
-    <!-- REMOVED constraintBottom_toTopOf. The ratio handles the height instantly now. -->
+    <!-- The 1:1 Card that holds everything -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/cardImage"
         android:layout_width="match_parent"
@@ -16,6 +16,7 @@
         app:strokeWidth="0dp"
         app:layout_constraintDimensionRatio="1:1"
         app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
@@ -24,12 +25,14 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
+            <!-- The Thumbnail Image -->
             <se.arctosoft.vault.views.GridImageView
                 android:id="@+id/imageView"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:scaleType="centerCrop" />
 
+            <!-- Text file preview placeholder -->
             <se.arctosoft.vault.views.PressableGridTextView
                 android:id="@+id/textView"
                 android:layout_width="match_parent"
@@ -38,6 +41,7 @@
                 android:padding="8dp"
                 android:visibility="gone" />
 
+            <!-- Selection Checkbox -->
             <com.google.android.material.checkbox.MaterialCheckBox
                 android:id="@+id/checked"
                 android:layout_width="wrap_content"
@@ -48,6 +52,7 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
+            <!-- Video/Gif Icon Indicator -->
             <ImageView
                 android:id="@+id/imgType"
                 android:layout_width="20dp"
@@ -60,6 +65,7 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
+            <!-- Note/Description Indicator -->
             <ImageView
                 android:id="@+id/has_description"
                 android:layout_width="20dp"
@@ -72,25 +78,25 @@
                 app:layout_constraintTop_toTopOf="@id/imgType"
                 app:layout_constraintBottom_toBottomOf="@id/imgType"/>
 
+            <!-- THE NEW CUTE OVERLAY TEXT -->
+            <!-- Anchored to the bottom of the card, with translucent dark glass styling -->
+            <TextView
+                android:id="@+id/txtName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#99000000"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="4dp"
+                android:textColor="#FFFFFF"
+                android:textSize="11sp"
+                android:maxLines="1"
+                android:ellipsize="middle"
+                android:gravity="center"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
         </se.arctosoft.vault.views.PressableConstraintLayout>
     </com.google.android.material.card.MaterialCardView>
-
-    <!-- Anchors strictly to the bottom of the card, ending the loop -->
-    <TextView
-        android:id="@+id/txtName"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:layout_marginBottom="8dp"
-        android:layout_marginStart="4dp"
-        android:layout_marginEnd="4dp"
-        android:ellipsize="end"
-        android:maxLines="1"
-        android:textSize="14sp"
-        android:textStyle="bold"
-        app:layout_constraintTop_toBottomOf="@id/cardImage"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

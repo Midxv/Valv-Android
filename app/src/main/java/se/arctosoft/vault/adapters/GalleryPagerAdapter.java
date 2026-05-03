@@ -333,8 +333,6 @@ public class GalleryPagerAdapter extends RecyclerView.Adapter<GalleryPagerViewHo
     private void setupVideoView(GalleryPagerViewHolder.GalleryPagerVideoViewHolder holder, FragmentActivity context, GalleryFile galleryFile) {
         holder.binding.rLPlay.setVisibility(View.VISIBLE);
         holder.binding.playerView.setVisibility(View.INVISIBLE);
-
-        // Hide the outer title so we don't have two titles competing on screen
         holder.parentBinding.txtName.setVisibility(View.GONE);
 
         Glide.with(context)
@@ -342,15 +340,8 @@ public class GalleryPagerAdapter extends RecyclerView.Adapter<GalleryPagerViewHo
                 .apply(GlideStuff.getRequestOptions(useDiskCache))
                 .into(holder.binding.imgThumb);
 
-        // --- NEW: Sync outer buttons with the video controls so they don't flash! ---
-        holder.binding.playerView.setControllerVisibilityListener((androidx.media3.ui.PlayerView.ControllerVisibilityListener) visibility -> {
-            holder.parentBinding.lLButtons.setVisibility(visibility);
-            holder.parentBinding.imgFullscreen.setVisibility(isFullscreen ? View.GONE : visibility);
-        });
-
         // --- MAP UI ELEMENTS ---
         View controllerView = holder.binding.playerView;
-
 
         View gestureOverlay = controllerView.findViewById(R.id.gesture_overlay);
         TextView tvGestureText = controllerView.findViewById(R.id.tv_gesture_text);
@@ -361,7 +352,38 @@ public class GalleryPagerAdapter extends RecyclerView.Adapter<GalleryPagerViewHo
             }
         };
 
-        // --- MANUAL PLAY/PAUSE CONTROL ---
+        // --- 1. ASPECT RATIO LOGIC (FIT, ZOOM, FILL) ---
+        TextView btnAspectRatio = controllerView.findViewById(R.id.btnAspectRatio);
+        if (btnAspectRatio != null) {
+            btnAspectRatio.setOnClickListener(v -> {
+                int currentMode = holder.binding.playerView.getResizeMode();
+                if (currentMode == androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT) {
+                    holder.binding.playerView.setResizeMode(androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM);
+                    btnAspectRatio.setText("ZOOM");
+                } else if (currentMode == androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM) {
+                    holder.binding.playerView.setResizeMode(androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL);
+                    btnAspectRatio.setText("FILL");
+                } else {
+                    holder.binding.playerView.setResizeMode(androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT);
+                    btnAspectRatio.setText("FIT");
+                }
+            });
+        }
+
+        // --- 2. ROTATE BUTTON LOGIC ---
+        TextView btnRotate = controllerView.findViewById(R.id.btnRotate);
+        if (btnRotate != null) {
+            btnRotate.setOnClickListener(v -> {
+                int currentOrientation = context.getResources().getConfiguration().orientation;
+                if (currentOrientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE) {
+                    context.setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+                } else {
+                    context.setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+                }
+            });
+        }
+
+        // --- 3. MANUAL PLAY/PAUSE CONTROL ---
         ImageButton btnPlayPause = controllerView.findViewById(R.id.custom_play_pause);
         if (btnPlayPause != null) {
             btnPlayPause.setOnClickListener(v -> {
@@ -377,7 +399,7 @@ public class GalleryPagerAdapter extends RecyclerView.Adapter<GalleryPagerViewHo
             });
         }
 
-        // --- GESTURE CONTROLS ---
+        // --- 4. GESTURE CONTROLS ---
         final android.media.AudioManager audioManager = (android.media.AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
 
         holder.binding.playerView.setOnTouchListener(new View.OnTouchListener() {
@@ -401,7 +423,6 @@ public class GalleryPagerAdapter extends RecyclerView.Adapter<GalleryPagerViewHo
 
                 @Override
                 public boolean onSingleTapConfirmed(android.view.MotionEvent e) {
-                    // FIXED: Properly show/hide the timeline controls!
                     if (holder.binding.playerView.isControllerFullyVisible()) {
                         holder.binding.playerView.hideController();
                     } else {
@@ -412,19 +433,26 @@ public class GalleryPagerAdapter extends RecyclerView.Adapter<GalleryPagerViewHo
 
                 @Override
                 public boolean onDoubleTap(android.view.MotionEvent e) {
-                    // Double Tap: Seek Forward/Rewind 10s
                     int pos = holder.getBindingAdapterPosition();
                     if (pos >= 0) {
                         ExoPlayer player = players.get(pos);
                         if (player != null) {
                             long currentPos = player.getCurrentPosition();
+
+                            gestureOverlay.animate().cancel();
+                            gestureOverlay.setVisibility(View.VISIBLE);
+                            gestureOverlay.setAlpha(1f);
+
                             if (e.getX() > (holder.binding.playerView.getWidth() / 2f)) {
-                                // Right Side = Fast Forward 10s
                                 player.seekTo(Math.min(player.getDuration(), currentPos + 10000));
+                                tvGestureText.setText("⏩ +10s");
                             } else {
-                                // Left Side = Rewind 10s
                                 player.seekTo(Math.max(0, currentPos - 10000));
+                                tvGestureText.setText("⏪ -10s");
                             }
+
+                            holder.binding.playerView.removeCallbacks(hideOverlay);
+                            holder.binding.playerView.postDelayed(hideOverlay, 800);
                         }
                     }
                     return true;
@@ -432,49 +460,59 @@ public class GalleryPagerAdapter extends RecyclerView.Adapter<GalleryPagerViewHo
 
                 @Override
                 public boolean onScroll(android.view.MotionEvent e1, android.view.MotionEvent e2, float distanceX, float distanceY) {
-                    // Ignore horizontal swipes
                     if (Math.abs(distanceX) > Math.abs(distanceY)) return false;
 
-                    float deltaY = startY - e2.getY(); // Positive if swiping up
+                    float deltaY = startY - e2.getY();
                     float swipePercentage = deltaY / holder.binding.playerView.getHeight();
 
+                    gestureOverlay.animate().cancel();
+                    gestureOverlay.setVisibility(View.VISIBLE);
+                    gestureOverlay.setAlpha(1f);
+
                     if (isRightSide) {
-                        // --- SWIPE RIGHT SIDE: VOLUME ---
                         int maxVolume = audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC);
                         int volumeChange = (int) (maxVolume * swipePercentage);
                         int newVolume = Math.max(0, Math.min(maxVolume, startVolume + volumeChange));
-                        audioManager.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, newVolume, android.media.AudioManager.FLAG_SHOW_UI);
+                        audioManager.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, newVolume, 0);
+
+                        int displayVol = (int) (((float) newVolume / maxVolume) * 100);
+                        tvGestureText.setText("🔊 " + displayVol + "%");
                     } else {
-                        // --- SWIPE LEFT SIDE: BRIGHTNESS ---
                         android.view.Window window = context.getWindow();
                         android.view.WindowManager.LayoutParams lp = window.getAttributes();
                         float newBrightness = Math.max(0.01f, Math.min(1.0f, startBrightness + swipePercentage));
                         lp.screenBrightness = newBrightness;
                         window.setAttributes(lp);
+
+                        int displayBright = (int) (newBrightness * 100);
+                        tvGestureText.setText("☀️ " + displayBright + "%");
                     }
+
+                    holder.binding.playerView.removeCallbacks(hideOverlay);
+                    holder.binding.playerView.postDelayed(hideOverlay, 800);
+
                     return true;
                 }
             });
 
             @Override
             public boolean onTouch(View v, android.view.MotionEvent event) {
-                // THE FIX: If the user touches the bottom 25% of the screen, ignore gestures!
-                // This allows the ExoPlayer timeline to be perfectly scrubbable.
                 if (event.getY() > (holder.binding.playerView.getHeight() * 0.75f)) {
                     return false;
                 }
-
-                // Otherwise, pass the touch to our gesture engine
                 gestureDetector.onTouchEvent(event);
                 return true;
             }
         });
 
-        // 4. Start Video on Click
+        // --- 5. INSTANTLY HIDE NAVBAR UPON PLAYING ---
         holder.binding.rLPlay.setOnClickListener(v -> {
             holder.binding.rLPlay.setVisibility(View.GONE);
             holder.binding.playerView.setVisibility(View.VISIBLE);
-            // This triggers your ExoPlayer initialization logic
+
+            // This force-kills the Delete/Export menu as long as the video player is open
+            holder.parentBinding.lLButtons.setVisibility(View.GONE);
+
             playVideo(context, galleryFile.getUri(), holder, galleryFile.getVersion(), galleryViewModel.getVideoPosition(galleryFile.getUri()));
         });
     }
