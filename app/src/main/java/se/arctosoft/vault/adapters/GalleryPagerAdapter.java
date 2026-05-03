@@ -28,6 +28,8 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.View;
+import android.widget.ImageButton;
+import android.widget.TextView;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
@@ -317,18 +319,51 @@ public class GalleryPagerAdapter extends RecyclerView.Adapter<GalleryPagerViewHo
     private void setupVideoView(GalleryPagerViewHolder.GalleryPagerVideoViewHolder holder, FragmentActivity context, GalleryFile galleryFile) {
         holder.binding.rLPlay.setVisibility(View.VISIBLE);
         holder.binding.playerView.setVisibility(View.INVISIBLE);
+
         Glide.with(context)
                 .load(galleryFile.getThumbUri())
                 .apply(GlideStuff.getRequestOptions(useDiskCache))
                 .into(holder.binding.imgThumb);
+
         holder.parentBinding.imgFullscreen.setVisibility(isFullscreen ? View.GONE : View.VISIBLE);
+
+        // --- NEW: Hook up your custom controller UI elements ---
+        View controllerView = holder.binding.playerView;
+
+        TextView tvTitle = controllerView.findViewById(R.id.tv_video_title);
+        if (tvTitle != null) {
+            tvTitle.setText(galleryFile.getName()); // Set the actual file name
+        }
+
+        ImageButton btnBack = controllerView.findViewById(R.id.btn_back);
+        if (btnBack != null) {
+            btnBack.setOnClickListener(v -> {
+                // Exit fullscreen or navigate back
+                if (isFullscreen) {
+                    setFullscreen(context, false);
+                } else {
+                    context.onBackPressed();
+                }
+            });
+        }
+
+        ImageButton btnAspectRatio = controllerView.findViewById(R.id.btn_aspect_ratio);
+        if (btnAspectRatio != null) {
+            btnAspectRatio.setOnClickListener(v -> {
+                // Toggle Fullscreen using your existing method
+                toggleFullscreen(context);
+            });
+        }
+
+        // You can add listeners for btn_speed, btn_pip, btn_lock here as you build out those features
+        // --------------------------------------------------------
+
         holder.binding.rLPlay.setOnClickListener(v -> {
             holder.binding.rLPlay.setVisibility(View.GONE);
             holder.binding.playerView.setVisibility(View.VISIBLE);
             playVideo(context, galleryFile.getUri(), holder, galleryFile.getVersion(), galleryViewModel.getVideoPosition(galleryFile.getUri()));
         });
     }
-
     private void showVideoReady(GalleryPagerViewHolder.GalleryPagerVideoViewHolder holder) {
         holder.binding.rLPlay.setVisibility(View.VISIBLE);
         holder.binding.playerView.setVisibility(View.GONE);
@@ -379,7 +414,7 @@ public class GalleryPagerAdapter extends RecyclerView.Adapter<GalleryPagerViewHo
         holder.binding.playerView.setPlayer(player);
         player.prepare();
         player.setPlayWhenReady(true);
-        holder.binding.playerView.hideController();
+        holder.binding.playerView.showController();
     }
 
     private void setupImageView(GalleryPagerViewHolder holder, FragmentActivity context, GalleryFile galleryFile) {
