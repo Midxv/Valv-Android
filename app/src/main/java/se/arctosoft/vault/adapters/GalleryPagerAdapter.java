@@ -227,7 +227,13 @@ public class GalleryPagerAdapter extends RecyclerView.Adapter<GalleryPagerViewHo
         holder.parentBinding.imgFullscreen.setVisibility(View.GONE);
         holder.parentBinding.noteLayout.setVisibility(View.GONE);
         holder.parentBinding.txtName.setVisibility(View.GONE);
-        ((GalleryPagerViewHolder.GalleryPagerDirectoryViewHolder) holder).binding.name.setText(context.getString(R.string.gallery_click_to_open_directory, galleryFile.getNameWithPath()));
+
+        // --- NEW: Extract ONLY the last folder name from the path ---
+        String folderName = new java.io.File(galleryFile.getNameWithPath()).getName();
+
+        // Use our clean folderName instead of galleryFile.getNameWithPath()
+        ((GalleryPagerViewHolder.GalleryPagerDirectoryViewHolder) holder).binding.name.setText(context.getString(R.string.gallery_click_to_open_directory, folderName));
+
         ((GalleryPagerViewHolder.GalleryPagerDirectoryViewHolder) holder).binding.getRoot().setOnClickListener(v -> {
             /*Intent intent = new Intent(context, GalleryDirectoryActivity.class);
             if (nestedPath != null) {

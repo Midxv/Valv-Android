@@ -100,7 +100,7 @@ public class GalleryGridAdapter extends RecyclerView.Adapter<GalleryGridViewHold
         static final int TYPE_TOGGLE_FILENAME = 1;
         static final int TYPE_NEW_FILENAME = 2;
         static final int TYPE_LOADED_NOTE = 3;
-       public static final int TYPE_RELEASE_VIDEO = 4;
+        public static final int TYPE_RELEASE_VIDEO = 4;
     }
 
     public GalleryGridAdapter(FragmentActivity context, @NonNull List<GalleryFile> galleryFiles, boolean showFileNames, boolean isRootDir, GalleryViewModel galleryViewModel) {
@@ -187,7 +187,12 @@ public class GalleryGridAdapter extends RecyclerView.Adapter<GalleryGridViewHold
                         .apply(GlideStuff.getRequestOptions(useDiskCache))
                         .into(holder.binding.imageView);
             }
-            holder.binding.txtName.setText(context.getString(R.string.gallery_adapter_folder_name, galleryFile.getNameWithPath(), galleryFile.getFileCount()));
+
+            // --- CLEAN ALBUM NAMES ---
+            // Strip the long relative path down to just the target folder name
+            String cleanFolderName = new java.io.File(galleryFile.getNameWithPath()).getName();
+            holder.binding.txtName.setText(context.getString(R.string.gallery_adapter_folder_name, cleanFolderName, galleryFile.getFileCount()));
+
         } else if (galleryFile.isText()) {
             holder.binding.imageView.setVisibility(View.GONE);
             holder.binding.textView.setText(galleryFile.getText() == null ? context.getString(R.string.loading) : galleryFile.getText());
@@ -197,7 +202,6 @@ public class GalleryGridAdapter extends RecyclerView.Adapter<GalleryGridViewHold
                 readText(context, galleryFile, holder);
             }
         } else {
-            //Log.e(TAG, "onBindViewHolder: load image, version " + galleryFile.getVersion() + ", " + galleryFile.getFileType().suffixPrefix);
             holder.binding.imageView.setVisibility(View.VISIBLE);
             if (galleryFile.getThumbUri() != null) {
                 Glide.with(context)
@@ -334,9 +338,6 @@ public class GalleryGridAdapter extends RecyclerView.Adapter<GalleryGridViewHold
                             }
                             notifyItemRangeChanged(minPos, 1 + (maxPos - minPos), new Payload(Payload.TYPE_SELECT_ALL));
                         }
-                        //if (context instanceof GalleryDirectoryActivity activity) {
-                        //    activity.onSelectionChanged(selectedFiles.size());
-                        //}
                     } else {
                         holder.binding.layout.performClick();
                     }
@@ -438,9 +439,6 @@ public class GalleryGridAdapter extends RecyclerView.Adapter<GalleryGridViewHold
             }
             notifyItemRangeChanged(0, galleryFiles.size(), new Payload(Payload.TYPE_SELECT_ALL));
         }
-        //if (weakReference.get() instanceof GalleryDirectoryActivity activity) {
-        //    activity.onSelectionChanged(selectedFiles.size());
-        //}
     }
 
     public boolean toggleFilenames() {
