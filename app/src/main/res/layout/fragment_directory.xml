@@ -36,34 +36,38 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent" />
 
-    <!-- 3. Empty State -->
+    <!-- 3. Modernized Empty State (Added Icon + Adjusted Typography) -->
     <TextView
         android:id="@+id/no_media"
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="32dp"
         android:padding="24dp"
         android:text="@string/gallery_no_folders"
         android:textAlignment="center"
-        android:textAppearance="?attr/textAppearanceBodyLarge"
+        android:textAppearance="?attr/textAppearanceTitleMedium"
         android:textColor="?android:attr/textColorSecondary"
+        app:drawableTopCompat="@drawable/ic_round_folder_open_24"
+        app:drawableTint="?android:attr/textColorSecondary"
+        android:drawablePadding="12dp"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- 4. Floating Bottom Navigation Bar (True Tiny Pill) -->
-    <!-- Notice layout_width="wrap_content" and labelVisibilityMode="unlabeled" -->
+    <!-- 4. Floating Bottom Navigation Bar (Dynamic Glass Pill) -->
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottom_navigation"
-        android:layout_width="165dp"
-        android:layout_height="62dp"
-        android:layout_marginBottom="15dp"
+        android:layout_width="150dp"
+        android:layout_height="60dp"
+        android:layout_marginBottom="16dp"
+        android:minWidth="160dp"
+        android:paddingHorizontal="16dp"
         android:background="@drawable/bg_floating_nav"
         android:elevation="0dp"
         app:itemActiveIndicatorStyle="@style/Widget.Material3.BottomNavigationView.ActiveIndicator"
-        app:itemIconTint="#FFFFFF"
+        app:itemIconTint="#2196F3"
         app:labelVisibilityMode="unlabeled"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -78,6 +82,7 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@id/bottom_navigation">
 
+        <!-- MD3 Standard Elevation is 3dp for resting FABs -->
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/fab"
             android:layout_width="wrap_content"
@@ -86,7 +91,7 @@
             android:layout_marginBottom="16dp"
             android:contentDescription="@string/gallery_add_folder"
             android:src="@drawable/round_add_24"
-            app:elevation="6dp"
+            app:elevation="3dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
 
@@ -108,6 +113,7 @@
                 android:orientation="vertical"
                 android:paddingBottom="12dp">
 
+                <!-- Re-spaced margins and softened shadows for the expanded menu -->
                 <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
                     android:id="@+id/fab_add_text"
                     android:layout_width="wrap_content"
@@ -117,7 +123,7 @@
                     android:alpha="0"
                     android:text="@string/gallery_add_text"
                     android:visibility="gone"
-                    app:elevation="4dp"
+                    app:elevation="2dp"
                     app:icon="@drawable/outline_text_snippet_24" />
 
                 <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
@@ -129,7 +135,7 @@
                     android:alpha="0"
                     android:text="@string/gallery_import_media"
                     android:visibility="gone"
-                    app:elevation="4dp"
+                    app:elevation="2dp"
                     app:icon="@drawable/outline_add_photo_alternate_24" />
 
                 <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
@@ -141,7 +147,7 @@
                     android:alpha="0"
                     android:text="@string/gallery_add_folder"
                     android:visibility="gone"
-                    app:elevation="4dp"
+                    app:elevation="2dp"
                     app:icon="@drawable/ic_outline_create_new_folder_24" />
 
                 <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
@@ -149,11 +155,11 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="16dp"
-                    android:layout_marginBottom="4dp"
+                    android:layout_marginBottom="8dp"
                     android:alpha="0"
                     android:text="@string/gallery_create_folder"
                     android:visibility="gone"
-                    app:elevation="4dp"
+                    app:elevation="2dp"
                     app:icon="@drawable/ic_outline_create_new_folder_24" />
 
             </androidx.appcompat.widget.LinearLayoutCompat>
@@ -178,7 +184,7 @@
             android:backgroundTint="?attr/button_warning"
             android:contentDescription="@string/dialog_delete_file_title"
             android:src="@drawable/ic_round_remove_circle_outline_24"
-            app:elevation="6dp"
+            app:elevation="3dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:tint="@color/white" />
