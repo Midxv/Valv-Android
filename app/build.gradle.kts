@@ -87,6 +87,7 @@ dependencies {
     implementation(libs.glide)
     implementation(libs.about.libraries)
     implementation(libs.about.libraries.compose)
+    implementation("androidx.palette:palette:1.0.0")
 }
 
 aboutLibraries {

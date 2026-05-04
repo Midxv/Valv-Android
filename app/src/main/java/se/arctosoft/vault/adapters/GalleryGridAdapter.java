@@ -24,14 +24,17 @@ import android.icu.text.SimpleDateFormat;
 import android.os.Bundle;
 import android.provider.DocumentsContract;
 import android.util.Log;
+import android.view.HapticFeedbackConstants;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.OvershootInterpolator;
 import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.res.ResourcesCompat;
+import androidx.core.view.ViewCompat;
 import androidx.documentfile.provider.DocumentFile;
 import androidx.fragment.app.FragmentActivity;
 import androidx.navigation.Navigation;
@@ -66,7 +69,6 @@ import se.arctosoft.vault.interfaces.IOnSelectionModeChanged;
 import se.arctosoft.vault.utils.Dialogs;
 import se.arctosoft.vault.utils.GlideStuff;
 import se.arctosoft.vault.utils.Settings;
-import se.arctosoft.vault.utils.StringStuff;
 import se.arctosoft.vault.viewmodel.GalleryViewModel;
 
 public class GalleryGridAdapter extends RecyclerView.Adapter<GalleryGridViewHolder> implements IOnSelectionModeChanged, FastScrollRecyclerView.SectionedAdapter {
@@ -80,7 +82,7 @@ public class GalleryGridAdapter extends RecyclerView.Adapter<GalleryGridViewHold
     private int lastSelectedPos;
     private String nestedPath;
 
-    // --- NEW: Lightweight thread pool for background decryption ---
+    // --- Lightweight thread pool for background decryption ---
     private final java.util.concurrent.ExecutorService nameDecryptionExecutor = java.util.concurrent.Executors.newFixedThreadPool(4);
 
     private final WeakReference<FragmentActivity> weakReference;
@@ -148,10 +150,15 @@ public class GalleryGridAdapter extends RecyclerView.Adapter<GalleryGridViewHold
 
         updateSelectedView(holder, galleryFile);
 
-        // --- NEW: Always respect user toggle for names (or force show for folders) ---
-        holder.binding.txtName.setVisibility(showFileNames || galleryFile.isDirectory() ? View.VISIBLE : View.GONE);
+        boolean showText = showFileNames || galleryFile.isDirectory();
+        holder.binding.txtName.setVisibility(showText ? View.VISIBLE : View.GONE);
+        holder.binding.txtSize.setVisibility(showText ? View.VISIBLE : View.GONE);
 
         holder.binding.imageView.setImageDrawable(null);
+
+        // --- NEW: Set Transition Name for Shared Element Animations ---
+        ViewCompat.setTransitionName(holder.binding.imageView, galleryFile.getUri().toString());
+
         if (!isRootDir && (galleryFile.isGif() || galleryFile.isVideo() || galleryFile.isDirectory())) {
             holder.binding.imgType.setVisibility(View.VISIBLE);
             holder.binding.imgType.setImageDrawable(ResourcesCompat.getDrawable(context.getResources(), galleryFile.isGif()
@@ -166,11 +173,13 @@ public class GalleryGridAdapter extends RecyclerView.Adapter<GalleryGridViewHold
         holder.binding.imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
         holder.binding.textView.setVisibility(View.GONE);
         holder.binding.textView.setText(null);
+
         if (galleryFile.isAllFolder()) {
             holder.binding.imageView.setVisibility(View.VISIBLE);
             holder.binding.imageView.setImageDrawable(ResourcesCompat.getDrawable(context.getResources(), R.drawable.round_all_inclusive_24, context.getTheme()));
             holder.binding.imageView.setScaleType(ImageView.ScaleType.CENTER);
             holder.binding.txtName.setText(context.getString(R.string.gallery_all));
+            holder.binding.txtSize.setVisibility(View.GONE);
         } else if (galleryFile.isDirectory()) {
             holder.binding.imageView.setVisibility(View.VISIBLE);
             galleryFile.findFilesInDirectory(context, () -> {
@@ -194,7 +203,8 @@ public class GalleryGridAdapter extends RecyclerView.Adapter<GalleryGridViewHold
             }
 
             String cleanFolderName = new java.io.File(galleryFile.getNameWithPath()).getName();
-            holder.binding.txtName.setText(context.getString(R.string.gallery_adapter_folder_name, cleanFolderName, galleryFile.getFileCount()));
+            holder.binding.txtName.setText(cleanFolderName);
+            holder.binding.txtSize.setText(galleryFile.getFileCount() + " Items");
 
         } else if (galleryFile.isText()) {
             holder.binding.imageView.setVisibility(View.GONE);
@@ -254,21 +264,20 @@ public class GalleryGridAdapter extends RecyclerView.Adapter<GalleryGridViewHold
         }).start();
     }
 
-    // --- NEW: Asynchronous Decryption Engine & Cute Formatting ---
     private void setItemFilename(@NonNull GalleryGridViewHolder holder, Context context, @NonNull GalleryFile galleryFile) {
         if (galleryFile.isDirectory()) {
             String cleanFolderName = new java.io.File(galleryFile.getNameWithPath()).getName();
-            holder.binding.txtName.setText(context.getString(R.string.gallery_adapter_folder_name, cleanFolderName, galleryFile.getFileCount()));
+            holder.binding.txtName.setText(cleanFolderName);
+            holder.binding.txtSize.setVisibility(View.VISIBLE);
+            holder.binding.txtSize.setText(galleryFile.getFileCount() + " Items");
             return;
         }
 
         if (galleryFile.getOriginalName() != null) {
-            displayCuteName(holder, galleryFile.getOriginalName(), galleryFile.getSize());
+            displayFileInfo(holder, context, galleryFile.getOriginalName(), galleryFile.getSize());
         } else {
-            // Show encrypted name immediately to avoid empty space
-            displayCuteName(holder, galleryFile.getName(), galleryFile.getSize());
+            displayFileInfo(holder, context, galleryFile.getName(), galleryFile.getSize());
 
-            // Decrypt quietly in the background
             nameDecryptionExecutor.execute(() -> {
                 try {
                     String realName = Encryption.getOriginalFilename(context.getContentResolver().openInputStream(galleryFile.getUri()), password.getPassword(), false, galleryFile.getVersion());
@@ -276,10 +285,9 @@ public class GalleryGridAdapter extends RecyclerView.Adapter<GalleryGridViewHold
 
                     if (context instanceof FragmentActivity) {
                         ((FragmentActivity) context).runOnUiThread(() -> {
-                            // Ensure the holder hasn't been recycled for a different file while scrolling
                             if (holder.getBindingAdapterPosition() != RecyclerView.NO_POSITION &&
                                     galleryFiles.get(holder.getBindingAdapterPosition()) == galleryFile) {
-                                displayCuteName(holder, realName, galleryFile.getSize());
+                                displayFileInfo(holder, context, realName, galleryFile.getSize());
                             }
                         });
                     }
@@ -290,17 +298,27 @@ public class GalleryGridAdapter extends RecyclerView.Adapter<GalleryGridViewHold
         }
     }
 
-    private void displayCuteName(GalleryGridViewHolder holder, String name, long size) {
+    private void displayFileInfo(GalleryGridViewHolder holder, Context context, String name, long size) {
+        holder.binding.txtName.setText(name);
+
         if (size > 0) {
-            holder.binding.txtName.setText(name + " • " + StringStuff.bytesToReadableString(size));
+            holder.binding.txtSize.setVisibility(View.VISIBLE);
+            String formattedSize = android.text.format.Formatter.formatShortFileSize(context, size);
+            holder.binding.txtSize.setText(formattedSize);
         } else {
-            holder.binding.txtName.setText(name);
+            holder.binding.txtSize.setVisibility(View.GONE);
         }
     }
 
     private void setClickListener(@NonNull GalleryGridViewHolder holder, FragmentActivity context, GalleryFile galleryFile) {
         holder.binding.layout.setOnClickListener(v -> {
             final int pos = holder.getBindingAdapterPosition();
+
+            // --- NEW: Subtle Haptic bump when tapping in selection mode ---
+            if (selectMode) {
+                v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+            }
+
             if (galleryFile.isAllFolder()) {
                 if (!selectMode) {
                     Navigation.findNavController(holder.binding.layout).navigate(R.id.action_directory_to_directoryAll);
@@ -340,7 +358,11 @@ public class GalleryGridAdapter extends RecyclerView.Adapter<GalleryGridViewHold
                 }
             }
         });
+
         holder.binding.layout.setOnLongClickListener(v -> {
+            // --- NEW: Stronger Haptic feedback on Long Press ---
+            v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+
             if (!galleryFile.isAllFolder() && galleryFile.isDirectory() && galleryFile.getFindFilesInDirectoryStatus() == GalleryFile.FIND_FILES_DONE
                     && galleryFile.getFileCount() == 0) {
                 Dialogs.showConfirmationDialog(context, context.getString(R.string.gallery_delete_folder_title), context.getString(R.string.gallery_delete_folder_message), (dialogInterface, i) -> {
@@ -398,7 +420,9 @@ public class GalleryGridAdapter extends RecyclerView.Adapter<GalleryGridViewHold
                     break;
                 } else if (((Payload) o).type == Payload.TYPE_TOGGLE_FILENAME) {
                     GalleryFile galleryFile = galleryFiles.get(position);
-                    holder.binding.txtName.setVisibility(showFileNames || galleryFile.isDirectory() ? View.VISIBLE : View.GONE);
+                    boolean showText = showFileNames || galleryFile.isDirectory();
+                    holder.binding.txtName.setVisibility(showText ? View.VISIBLE : View.GONE);
+                    holder.binding.txtSize.setVisibility(showText ? View.VISIBLE : View.GONE);
                     found = true;
                 } else if (((Payload) o).type == Payload.TYPE_NEW_FILENAME) {
                     setItemFilename(holder, weakReference.get(), galleryFiles.get(holder.getBindingAdapterPosition()));
@@ -426,13 +450,32 @@ public class GalleryGridAdapter extends RecyclerView.Adapter<GalleryGridViewHold
         }
     }
 
+    // --- NEW: Spring-loaded selection animation ---
     private void updateSelectedView(GalleryGridViewHolder holder, GalleryFile galleryFile) {
         if (!galleryFile.isAllFolder() && selectMode && (isRootDir || !galleryFile.isDirectory())) {
+            boolean isSelected = selectedFiles.contains(galleryFile);
             holder.binding.checked.setVisibility(View.VISIBLE);
-            holder.binding.checked.setChecked(selectedFiles.contains(galleryFile));
+            holder.binding.checked.setChecked(isSelected);
+
+            // Bounce it slightly inward when selected
+            float scale = isSelected ? 0.88f : 1.0f;
+            holder.binding.cardImage.animate()
+                    .scaleX(scale)
+                    .scaleY(scale)
+                    .setDuration(250)
+                    .setInterpolator(new OvershootInterpolator())
+                    .start();
         } else {
             holder.binding.checked.setVisibility(View.GONE);
             holder.binding.checked.setChecked(false);
+
+            // Return to full size
+            holder.binding.cardImage.animate()
+                    .scaleX(1.0f)
+                    .scaleY(1.0f)
+                    .setDuration(250)
+                    .setInterpolator(new OvershootInterpolator())
+                    .start();
         }
     }
 

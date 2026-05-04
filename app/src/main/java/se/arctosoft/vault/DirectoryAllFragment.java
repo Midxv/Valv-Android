@@ -5,6 +5,9 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.HapticFeedbackConstants;
+import android.view.MotionEvent;
+import android.view.ScaleGestureDetector;
 import android.view.View;
 
 import androidx.activity.OnBackPressedCallback;
@@ -12,6 +15,7 @@ import androidx.annotation.NonNull;
 import androidx.documentfile.provider.DocumentFile;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
+import androidx.recyclerview.widget.GridLayoutManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +32,12 @@ public class DirectoryAllFragment extends DirectoryBaseFragment {
     private int foundFiles = 0, foundFolders = 0;
     private com.google.android.material.bottomnavigation.BottomNavigationView bottomNav;
     private boolean isNavPillHidden = false; // The lock that prevents scroll lag!
+
+    // --- NEW: Variables for the Breathing Grid ---
+    private ScaleGestureDetector scaleGestureDetector;
+    private float scaleFactor = 1.0f;
+    private static final int MIN_COLUMNS = 2;
+    private static final int MAX_COLUMNS = 6;
 
     @Override
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
@@ -115,6 +125,44 @@ public class DirectoryAllFragment extends DirectoryBaseFragment {
                 }
             });
         }
+        // -----------------------------
+
+        // --- NEW: THE "BREATHING" GRID (PINCH TO ZOOM COLUMNS) ---
+        scaleGestureDetector = new ScaleGestureDetector(context, new ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            @Override
+            public boolean onScale(@NonNull ScaleGestureDetector detector) {
+                scaleFactor *= detector.getScaleFactor();
+
+                if (binding.recyclerView.getLayoutManager() instanceof GridLayoutManager) {
+                    GridLayoutManager layoutManager = (GridLayoutManager) binding.recyclerView.getLayoutManager();
+                    int currentSpans = layoutManager.getSpanCount();
+
+                    // Pinching Out (Zooming In) -> Fewer Columns
+                    if (scaleFactor > 1.25f && currentSpans > MIN_COLUMNS) {
+                        layoutManager.setSpanCount(currentSpans - 1);
+                        scaleFactor = 1.0f; // Reset threshold
+                        binding.recyclerView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+                        galleryGridAdapter.notifyItemRangeChanged(0, galleryGridAdapter.getItemCount());
+                        return true;
+                    }
+                    // Pinching In (Zooming Out) -> More Columns
+                    else if (scaleFactor < 0.75f && currentSpans < MAX_COLUMNS) {
+                        layoutManager.setSpanCount(currentSpans + 1);
+                        scaleFactor = 1.0f; // Reset threshold
+                        binding.recyclerView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+                        galleryGridAdapter.notifyItemRangeChanged(0, galleryGridAdapter.getItemCount());
+                        return true;
+                    }
+                }
+                return false;
+            }
+        });
+
+        // Intercept touches on the RecyclerView to feed the detector
+        binding.recyclerView.setOnTouchListener((v, event) -> {
+            scaleGestureDetector.onTouchEvent(event);
+            return false; // Return false so normal scrolling still works perfectly
+        });
         // -----------------------------
 
         initViewModels();
