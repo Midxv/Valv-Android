@@ -189,6 +189,7 @@ public class GalleryFile implements Comparable<GalleryFile> {
         return fileType.type == FileType.TYPE_VIDEO;
     }
 
+
     public boolean isGif() {
         return fileType.type == FileType.TYPE_GIF;
     }
