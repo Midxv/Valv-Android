@@ -156,18 +156,24 @@ public class GalleryGridAdapter extends RecyclerView.Adapter<GalleryGridViewHold
 
         holder.binding.imageView.setImageDrawable(null);
 
-        // --- NEW: Set Transition Name for Shared Element Animations ---
+        // Set Transition Name for Shared Element Animations
         ViewCompat.setTransitionName(holder.binding.imageView, galleryFile.getUri().toString());
 
-        if (!isRootDir && (galleryFile.isGif() || galleryFile.isVideo() || galleryFile.isDirectory())) {
+        // --- NEW: Audio Support in the Top Corner Type Indicator ---
+        if (!isRootDir && (galleryFile.isGif() || galleryFile.isVideo() || galleryFile.isAudio() || galleryFile.isDirectory())) {
             holder.binding.imgType.setVisibility(View.VISIBLE);
-            holder.binding.imgType.setImageDrawable(ResourcesCompat.getDrawable(context.getResources(), galleryFile.isGif()
-                            ? R.drawable.ic_round_gif_24 : (galleryFile.isVideo()
-                            ? R.drawable.ic_outline_video_file_24 : (galleryFile.isText() ? R.drawable.outline_text_snippet_24 : R.drawable.ic_round_folder_open_24)),
-                    context.getTheme()));
+
+            int iconRes = R.drawable.ic_round_folder_open_24;
+            if (galleryFile.isGif()) iconRes = R.drawable.ic_round_gif_24;
+            else if (galleryFile.isVideo()) iconRes = R.drawable.ic_outline_video_file_24;
+            else if (galleryFile.isAudio()) iconRes = R.drawable.ic_outline_audio_file_24;
+            else if (galleryFile.isText()) iconRes = R.drawable.outline_text_snippet_24;
+
+            holder.binding.imgType.setImageDrawable(ResourcesCompat.getDrawable(context.getResources(), iconRes, context.getTheme()));
         } else {
             holder.binding.imgType.setVisibility(View.GONE);
         }
+
         holder.binding.hasDescription.setVisibility(!isRootDir && galleryFile.hasNote() ? View.VISIBLE : View.GONE);
 
         holder.binding.imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
@@ -214,6 +220,14 @@ public class GalleryGridAdapter extends RecyclerView.Adapter<GalleryGridViewHold
             if (galleryFile.getText() == null) {
                 readText(context, galleryFile, holder);
             }
+            // --- NEW: Audio Thumbnail Support ---
+        } else if (galleryFile.isAudio()) {
+            holder.binding.imageView.setVisibility(View.VISIBLE);
+            Glide.with(context)
+                    .load(R.drawable.ic_outline_audio_file_24)
+                    .centerInside() // Keeps the icon neatly in the center instead of stretching it
+                    .into(holder.binding.imageView);
+            setItemFilename(holder, context, galleryFile);
         } else {
             holder.binding.imageView.setVisibility(View.VISIBLE);
             if (galleryFile.getThumbUri() != null) {
@@ -314,7 +328,6 @@ public class GalleryGridAdapter extends RecyclerView.Adapter<GalleryGridViewHold
         holder.binding.layout.setOnClickListener(v -> {
             final int pos = holder.getBindingAdapterPosition();
 
-            // --- NEW: Subtle Haptic bump when tapping in selection mode ---
             if (selectMode) {
                 v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
             }
@@ -360,7 +373,6 @@ public class GalleryGridAdapter extends RecyclerView.Adapter<GalleryGridViewHold
         });
 
         holder.binding.layout.setOnLongClickListener(v -> {
-            // --- NEW: Stronger Haptic feedback on Long Press ---
             v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
 
             if (!galleryFile.isAllFolder() && galleryFile.isDirectory() && galleryFile.getFindFilesInDirectoryStatus() == GalleryFile.FIND_FILES_DONE
@@ -450,7 +462,6 @@ public class GalleryGridAdapter extends RecyclerView.Adapter<GalleryGridViewHold
         }
     }
 
-    // --- NEW: Spring-loaded selection animation ---
     private void updateSelectedView(GalleryGridViewHolder holder, GalleryFile galleryFile) {
         if (!galleryFile.isAllFolder() && selectMode && (isRootDir || !galleryFile.isDirectory())) {
             boolean isSelected = selectedFiles.contains(galleryFile);

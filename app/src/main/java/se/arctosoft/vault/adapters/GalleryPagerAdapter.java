@@ -151,15 +151,19 @@ public class GalleryPagerAdapter extends RecyclerView.Adapter<GalleryPagerViewHo
         LayoutInflater layoutInflater = LayoutInflater.from(parent.getContext());
         AdapterGalleryViewpagerItemBinding parentBinding = AdapterGalleryViewpagerItemBinding.inflate(layoutInflater, parent, false);
         setPadding(parentBinding);
+
         if (viewType == FileType.TYPE_IMAGE) {
             AdapterGalleryViewpagerItemImageBinding imageBinding = AdapterGalleryViewpagerItemImageBinding.inflate(layoutInflater, parentBinding.content, true);
             return new GalleryPagerViewHolder.GalleryPagerImageViewHolder(parentBinding, imageBinding);
         } else if (viewType == FileType.TYPE_GIF) {
             AdapterGalleryViewpagerItemGifBinding gifBinding = AdapterGalleryViewpagerItemGifBinding.inflate(layoutInflater, parentBinding.content, true);
             return new GalleryPagerViewHolder.GalleryPagerGifViewHolder(parentBinding, gifBinding);
-        } else if (viewType == FileType.TYPE_VIDEO) {
+
+            // --- NEW: Audio routes into the Video View Holder! ---
+        } else if (viewType == FileType.TYPE_VIDEO || viewType == FileType.TYPE_AUDIO) {
             AdapterGalleryViewpagerItemVideoBinding videoBinding = AdapterGalleryViewpagerItemVideoBinding.inflate(layoutInflater, parentBinding.content, true);
             return new GalleryPagerViewHolder.GalleryPagerVideoViewHolder(parentBinding, videoBinding);
+
         } else if (viewType == FileType.TYPE_TEXT) {
             AdapterGalleryViewpagerItemTextBinding textBinding = AdapterGalleryViewpagerItemTextBinding.inflate(layoutInflater, parentBinding.content, true);
             setViewPadding(textBinding.text);
@@ -437,10 +441,18 @@ public class GalleryPagerAdapter extends RecyclerView.Adapter<GalleryPagerViewHo
         holder.binding.playerView.setVisibility(View.INVISIBLE);
         holder.parentBinding.txtName.setVisibility(View.GONE);
 
-        Glide.with(context)
-                .load(galleryFile.getThumbUri())
-                .apply(GlideStuff.getRequestOptions(useDiskCache))
-                .into(holder.binding.imgThumb);
+        // --- NEW: Audio Thumbnail Injection ---
+        if (galleryFile.isAudio()) {
+            Glide.with(context)
+                    .load(R.drawable.ic_outline_audio_file_24)
+                    .centerInside()
+                    .into(holder.binding.imgThumb);
+        } else {
+            Glide.with(context)
+                    .load(galleryFile.getThumbUri())
+                    .apply(GlideStuff.getRequestOptions(useDiskCache))
+                    .into(holder.binding.imgThumb);
+        }
 
         View controllerView = holder.binding.playerView;
         View gestureOverlay = controllerView.findViewById(R.id.gesture_overlay);
@@ -498,7 +510,7 @@ public class GalleryPagerAdapter extends RecyclerView.Adapter<GalleryPagerViewHo
 
         final android.media.AudioManager audioManager = (android.media.AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
 
-        // --- NEW: Video Touch Engine (Combined Gestures + Haptics + Pull-to-Dismiss) ---
+        // --- Video Touch Engine (Combined Gestures + Haptics + Pull-to-Dismiss) ---
         holder.binding.playerView.setOnTouchListener(new View.OnTouchListener() {
             private float startY = 0f;
             private float startX = 0f;

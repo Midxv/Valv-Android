@@ -322,7 +322,7 @@ public class DirectoryFragment extends DirectoryBaseFragment {
             }
         });
         binding.fabImportMedia.setOnClickListener(v -> {
-            String[] mimeTypes = new String[]{"image/*", "video/*"};
+            String[] mimeTypes = new String[]{"image/*", "video/*", "audio/*"};
             resultLauncherOpenDocuments.launch(mimeTypes);
             binding.fab.performClick();
         });
