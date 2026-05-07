@@ -59,10 +59,10 @@
         app:layout_constraintEnd_toEndOf="parent">
 
         <com.google.android.material.card.MaterialCardView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="40dp"
-            app:cardBackgroundColor="#4D000000"
+            android:layout_width="190dp"
+            android:layout_height="65dp"
+            android:layout_marginBottom="7dp"
+            app:cardBackgroundColor="#26FFFFFF"
             app:cardCornerRadius="32dp"
             app:cardElevation="0dp"
             app:strokeWidth="0dp">

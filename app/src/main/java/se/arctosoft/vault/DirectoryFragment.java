@@ -234,14 +234,42 @@ public class DirectoryFragment extends DirectoryBaseFragment {
 
     @Override
     void showViewpager(boolean show, int pos, boolean animate) {
-        binding.layoutFabsAdd.setVisibility(show ? View.GONE : View.VISIBLE);
+        if (binding.layoutFabsAdd != null) binding.layoutFabsAdd.setVisibility(show ? View.GONE : View.VISIBLE);
+        View bottomNav = binding.getRoot().findViewById(R.id.bottom_navigation);
+        if (bottomNav != null) bottomNav.setVisibility(show ? View.GONE : View.VISIBLE);
 
-        // Hide bottom navigation when viewing fullscreen media
-        if (bottomNavigationView != null && galleryViewModel.isRootDir()) {
-            bottomNavigationView.setVisibility(show ? View.GONE : View.VISIBLE);
+        if (show) {
+            binding.viewPager.setCurrentItem(pos, false);
+            binding.viewPager.setAlpha(0f);
+            binding.viewPager.setScaleX(0.95f);
+            binding.viewPager.setScaleY(0.95f);
+            binding.viewPager.setVisibility(View.VISIBLE);
+            galleryPagerAdapter.triggerActiveVideo(pos);
+
+            binding.viewPager.animate()
+                    .alpha(1f)
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(250)
+                    .setInterpolator(new androidx.interpolator.view.animation.FastOutSlowInInterpolator())
+                    .start();
+        } else {
+            binding.viewPager.animate()
+                    .alpha(0f)
+                    .scaleX(0.95f)
+                    .scaleY(0.95f)
+                    .setDuration(200)
+                    .setInterpolator(new androidx.interpolator.view.animation.FastOutSlowInInterpolator())
+                    .withEndAction(() -> {
+                        binding.viewPager.setVisibility(View.GONE);
+                        binding.viewPager.setScaleX(1f);
+                        binding.viewPager.setScaleY(1f);
+                        binding.viewPager.setAlpha(1f);
+                    })
+                    .start();
         }
 
-        super.showViewpager(show, pos, animate);
+        super.showViewpager(show, pos, false);
     }
 
     private void checkSharedData() {

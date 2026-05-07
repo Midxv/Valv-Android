@@ -437,11 +437,12 @@ public class GalleryPagerAdapter extends RecyclerView.Adapter<GalleryPagerViewHo
 
     @OptIn(markerClass = UnstableApi.class)
     private void setupVideoView(GalleryPagerViewHolder.GalleryPagerVideoViewHolder holder, FragmentActivity context, GalleryFile galleryFile) {
-        holder.binding.rLPlay.setVisibility(View.VISIBLE);
-        holder.binding.playerView.setVisibility(View.INVISIBLE);
+        // Frictionless UI: Hide the play button overlay, show the player immediately
+        holder.binding.rLPlay.setVisibility(View.GONE);
+        holder.binding.playerView.setVisibility(View.VISIBLE);
         holder.parentBinding.txtName.setVisibility(View.GONE);
 
-        // --- NEW: Audio Thumbnail Injection ---
+        // Audio Thumbnail Injection
         if (galleryFile.isAudio()) {
             Glide.with(context)
                     .load(R.drawable.ic_outline_audio_file_24)
@@ -669,13 +670,6 @@ public class GalleryPagerAdapter extends RecyclerView.Adapter<GalleryPagerViewHo
                 gestureDetector.onTouchEvent(event);
                 return true;
             }
-        });
-
-        holder.binding.rLPlay.setOnClickListener(v -> {
-            holder.binding.rLPlay.setVisibility(View.GONE);
-            holder.binding.playerView.setVisibility(View.VISIBLE);
-            holder.parentBinding.lLButtons.setVisibility(View.GONE);
-            playVideo(context, galleryFile.getUri(), holder, galleryFile.getVersion(), galleryViewModel.getVideoPosition(galleryFile.getUri()));
         });
     }
 
@@ -1069,6 +1063,47 @@ public class GalleryPagerAdapter extends RecyclerView.Adapter<GalleryPagerViewHo
     public int getItemViewType(int position) {
         GalleryFile galleryFile = galleryFiles.get(position);
         return galleryFile.getFileType().type;
+    }
+
+    // --- NEW: Smart ViewPager Scroll Engine ---
+    private androidx.viewpager2.widget.ViewPager2 attachedViewPager;
+
+    @Override
+    public void onAttachedToRecyclerView(@NonNull RecyclerView recyclerView) {
+        super.onAttachedToRecyclerView(recyclerView);
+        if (recyclerView.getParent() instanceof androidx.viewpager2.widget.ViewPager2) {
+            attachedViewPager = (androidx.viewpager2.widget.ViewPager2) recyclerView.getParent();
+            attachedViewPager.registerOnPageChangeCallback(new androidx.viewpager2.widget.ViewPager2.OnPageChangeCallback() {
+                @Override
+                public void onPageSelected(int position) {
+                    super.onPageSelected(position);
+                    triggerActiveVideo(position);
+                }
+            });
+        }
+    }
+
+    public void triggerActiveVideo(int position) {
+        if (position < 0 || position >= galleryFiles.size()) return;
+
+        GalleryFile file = galleryFiles.get(position);
+        if (file.isVideo() || file.isAudio()) {
+            if (attachedViewPager != null) {
+                RecyclerView rv = (RecyclerView) attachedViewPager.getChildAt(0);
+                rv.post(() -> {
+                    // Force pause all background players to free up the decryption engine!
+                    pausePlayers();
+
+                    RecyclerView.ViewHolder holder = rv.findViewHolderForAdapterPosition(position);
+                    if (holder instanceof GalleryPagerViewHolder.GalleryPagerVideoViewHolder) {
+                        playVideo(weakReference.get(), file.getUri(), (GalleryPagerViewHolder.GalleryPagerVideoViewHolder) holder, file.getVersion(), galleryViewModel.getVideoPosition(file.getUri()));
+                    }
+                });
+            }
+        } else {
+            // If the user swiped to an image, immediately pause the audio/video!
+            pausePlayers();
+        }
     }
 
     @Override
