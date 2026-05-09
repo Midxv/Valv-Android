@@ -34,7 +34,6 @@ import se.arctosoft.vault.interfaces.IOnDirectoryAdded;
 import se.arctosoft.vault.utils.Dialogs;
 import se.arctosoft.vault.utils.FileStuff;
 import se.arctosoft.vault.utils.Settings;
-import se.arctosoft.vault.utils.SortManager;
 import se.arctosoft.vault.utils.Toaster;
 import se.arctosoft.vault.viewmodel.ShareViewModel;
 
@@ -508,32 +507,6 @@ public class DirectoryFragment extends DirectoryBaseFragment {
         }).start();
     }
 
-    private void showSortOptionsDialog() {
-        // 1. Safely get the URI directly from the Fragment Arguments (No ViewModel needed!)
-        String currentFolderUri = "root";
-        if (getArguments() != null && getArguments().getString(ARGUMENT_DIRECTORY) != null) {
-            currentFolderUri = getArguments().getString(ARGUMENT_DIRECTORY);
-        }
-
-        final String finalUri = currentFolderUri;
-        int currentSort = SortManager.getSortOrder(requireContext(), finalUri);
-
-        String[] options = {"Date (Newest First)", "Date (Oldest First)", "Name (A-Z)", "Name (Z-A)"};
-
-        new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Sort Folder")
-                .setSingleChoiceItems(options, currentSort, (dialog, which) -> {
-
-                    // 2. Save the new preference for this specific folder
-                    SortManager.saveSortOrder(requireContext(), finalUri, which);
-
-                    // 3. Instantly reload the UI to apply the new sort order!
-                    requireActivity().recreate();
-
-                    dialog.dismiss();
-                })
-                .show();
-    }
     private void addFoundRootDirectories(@NonNull List<Uri> directories, FragmentActivity activity) {
         for (int i = 0; i < directories.size(); i++) {
             Uri uri = directories.get(i);

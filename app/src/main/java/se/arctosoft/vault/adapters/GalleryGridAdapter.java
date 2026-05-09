@@ -204,7 +204,7 @@ public class GalleryGridAdapter extends RecyclerView.Adapter<GalleryGridViewHold
             } else {
                 Glide.with(context)
                         .load(firstFile.getThumbUri())
-                        .apply(GlideStuff.getRequestOptions(useDiskCache))
+                        .apply(GlideStuff.getRequestOptions(useDiskCache, galleryFile.getName()))
                         .into(holder.binding.imageView);
             }
 
@@ -233,7 +233,7 @@ public class GalleryGridAdapter extends RecyclerView.Adapter<GalleryGridViewHold
             if (galleryFile.getThumbUri() != null) {
                 Glide.with(context)
                         .load(galleryFile.getThumbUri())
-                        .apply(GlideStuff.getRequestOptions(useDiskCache))
+                        .apply(GlideStuff.getRequestOptions(useDiskCache, galleryFile.getName()))
                         .listener(new RequestListener<>() {
                             @Override
                             public boolean onLoadFailed(@Nullable GlideException e, Object model, @NonNull Target<Drawable> target, boolean isFirstResource) {
