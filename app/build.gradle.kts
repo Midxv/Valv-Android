@@ -11,10 +11,10 @@ configure<ApplicationExtension> {
 
     defaultConfig {
         applicationId = "se.arctosoft.vault"
-        minSdk = 28
+        minSdk = 30
         targetSdk = 36
         versionCode = 41
-        versionName = "2.4.3"
+        versionName = "2.5.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

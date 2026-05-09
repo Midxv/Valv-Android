@@ -78,9 +78,31 @@ public class FileStuff {
             } while (c.moveToNext());
         }
 
+        // Sort the raw cursor files to group thumbs/notes together safely
         Collections.sort(files);
         List<GalleryFile> encryptedFilesInFolder = getEncryptedFilesInFolder(files);
-        Collections.sort(encryptedFilesInFolder);
+
+        // --- NEW: Apply Custom Persistent Sorting Per-Folder ---
+        int sortMode = SortManager.getSortOrder(context, pickedDir.toString());
+
+        Collections.sort(encryptedFilesInFolder, (f1, f2) -> {
+            // Rule 1: Directories (Folders) always stay at the top of the grid
+            if (f1.isDirectory() && !f2.isDirectory()) return -1;
+            if (!f1.isDirectory() && f2.isDirectory()) return 1;
+
+            // Rule 2: Apply the user's chosen sort order
+            switch (sortMode) {
+                case SortManager.SORT_NAME_ASC: // A - Z
+                    return f1.getName().compareToIgnoreCase(f2.getName());
+                case SortManager.SORT_NAME_DESC: // Z - A
+                    return f2.getName().compareToIgnoreCase(f1.getName());
+                case SortManager.SORT_DATE_ASC: // Oldest First
+                    return Long.compare(f1.getLastModified(), f2.getLastModified());
+                case SortManager.SORT_DATE_DESC: // Newest First
+                default:
+                    return Long.compare(f2.getLastModified(), f1.getLastModified());
+            }
+        });
 
         return encryptedFilesInFolder;
     }
